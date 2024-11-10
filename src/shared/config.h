@@ -5,7 +5,7 @@
 
 static const int ERROR_CODE = -1;
 static const __uint64_t MAX_PATH_LEN = 1024;
-const enum  Mode {
+enum  Mode {
     None,
     Full,
     Incremental 

@@ -90,7 +90,7 @@ int restore_file (const char *src_path, const char *dst_path) { /// src - backup
 
     int src_fd = open (src_path, O_RDONLY);
     if (src_fd == -1) {
-        fprintf ("Error: open() failed with file %s.\n", src_path);
+        fprintf (stderr, "Error: open() failed with file %s.\n", src_path);
         perror ("");
         return ERROR_CODE;
     }
@@ -102,7 +102,7 @@ int restore_file (const char *src_path, const char *dst_path) { /// src - backup
             close (src_fd);
             return 0;
         } else {
-            fprintf ("Error: open() failed with file %s.\n", src_path);
+            fprintf (stderr, "Error: open() failed with file %s.\n", src_path);
             perror ("");
             close (src_fd);
             return ERROR_CODE;

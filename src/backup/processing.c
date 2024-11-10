@@ -39,7 +39,6 @@ int parse_mode (const char *input_mode, int *mode) {
     return 0;
 }
 
-
 int check_input (const char *work_fname, const char *backup_fname) {
     assert (work_fname && backup_fname);
     

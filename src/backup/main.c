@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "backup.h"
+#include "processing.h"
 #include "../shared/config.h"
 
 int main(const int argc, const char *argv[])

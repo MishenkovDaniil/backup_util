@@ -40,7 +40,7 @@ int create_backup (struct Backup_args *backup_args) {
     char *work_basename = basename (backup_args->work_fname_);
 
     if (strlen (backup_args->backup_fname_) + strlen(work_basename) + 19 + 3 > MAX_FILE_PATH) { /// 3 string lens (strlen(time) == 19 always) + 2 '/' + '\0'
-        fprintf (stderr, "gg\n");
+        fprintf (stderr, "Error: max file path (%d) exceeded.\n", MAX_FILE_PATH);
         return ERROR_CODE;
     }
 
@@ -50,7 +50,6 @@ int create_backup (struct Backup_args *backup_args) {
     }
 
     get_cur_date (time);
-    printf ("%s\n", work_basename);
 
     sprintf (real_backup_fname, "%s/%s", backup_args->backup_fname_, time);
     mkdir (real_backup_fname, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -170,12 +169,12 @@ int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const 
     static int is_start = 1;
 
     if (!work_d) {
-        fprintf (stderr, "Error: cannot open dir %s", work_d);
+        fprintf (stderr, "Error: cannot open dir %s", work_dirname);
         perror ("");
         return ERROR_CODE;
     }
     if (!backup_d) {
-        fprintf (stderr, "Error: cannot open dir %s", backup_d);
+        fprintf (stderr, "Error: cannot open dir %s", backup_dirname);
         perror ("");
         return ERROR_CODE;
     }
@@ -234,12 +233,12 @@ int creat_n_cp_dir_incr (const char *work_dirname, const char *backup_dirname, c
     static int is_start = 1;
 
     if (!work_d) {
-        fprintf (stderr, "Error: cannot open dir %s", work_d);
+        fprintf (stderr, "Error: cannot open dir %s", work_dirname);
         perror ("");
         return ERROR_CODE;
     }
     if (!backup_d) {
-        fprintf (stderr, "Error: cannot open dir %s", backup_d);
+        fprintf (stderr, "Error: cannot open dir %s", backup_dirname);
         perror ("");
         return ERROR_CODE;
     }
