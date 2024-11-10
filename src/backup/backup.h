@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "config.h"
 
@@ -29,8 +29,9 @@ int check_input (const char *work_fname, const char *backup_fname);
 int create_backup (struct Backup_args *backup_args);
 
 int cp_to_backup (const char *backup_fname, const char * work_fname, const int mode);
-int get_cur_date (char *time);
+void cp_to_backup_recursive (const char *backup_fname, const char * work_fname, const int mode, int *cp_status);
 
+int get_cur_date (char *time);
 void itoa(int num, char *str);
 void reverse(char *str);
 

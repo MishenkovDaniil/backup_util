@@ -1,11 +1,13 @@
+#include <assert.h>
+#include <ctype.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "backup.h"
 #include "config.h"
-#include <assert.h>
-#include <string.h>
-#include <dirent.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <fcntl.h>
+
 void construct (struct Backup_args *backup_args, const char *work_fname, const char *backup_fname, const int mode) {
     assert (backup_args && work_fname && backup_fname);
 
@@ -182,12 +184,27 @@ int create_backup (struct Backup_args *backup_args) {
 }
 
 int cp_to_backup (const char *backup_fname, const char * work_fname, const int mode) {
-    return 0;
+    int cp_status  = 0;
+    
+    cp_to_backup_recursive (backup_fname, work_fname, mode, &cp_status);
+
+    return cp_status;
+}
+
+void cp_to_backup_recursive (const char *backup_fname, const char *work_fname, const int mode, int *cp_status) {
+    struct stat st;
+    int status = stat (work_fname, &st);
+    if (S_ISDIR (st.st_mode)) {
+        creat_n_cp_dir (work_fname, backup_fname, mode, cp_status);
+    } else {
+        // creat_n_cp_file () how to add filename of work ??
+        ;
+    }
 }
 
 int creat_n_cp_file (const char *src_path, const char *dst_path) {
     static char buf[8096];
-
+    
     struct stat src_st;
     int status = stat (src_path, &src_st);
     __uint64_t size = src_st.st_size;
@@ -202,7 +219,7 @@ int creat_n_cp_file (const char *src_path, const char *dst_path) {
         read(src_fd, whole_buf, size);
         write (dst_fd, whole_buf, size);
 
-        free (buf);
+        free (whole_buf);
     } else {
         read(src_fd, buf, size);
         write (dst_fd, buf, size);
@@ -213,6 +230,67 @@ int creat_n_cp_file (const char *src_path, const char *dst_path) {
 
     return 0;
 }
+
+int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const int mode, int *cp_status) {
+    DIR *work_d = opendir (work_dirname);
+    DIR *backup_d = opendir (backup_dirname);
+    static char work_buf[1024] = "";
+    static char backup_buf[1024] = "";
+    __uint64_t work_cur_len  = 0;
+    __uint64_t backup_cur_len  = 0;
+    static int is_start = 1;
+
+    if (!work_d) {
+        fprintf (stderr, "Error: cannot open dir %s", work_d);
+        perror ("");
+        return ERROR_CODE;
+    }
+    if (!backup_d) {
+        fprintf (stderr, "Error: cannot open dir %s", backup_d);
+        perror ("");
+        return ERROR_CODE;
+    }
+
+    struct dirent *work_dirp;
+    struct dirent *backup_dirp;
+
+    if (is_start) {
+        sprintf (work_buf, "%s", work_dirname); 
+        sprintf (backup_buf, "%s", backup_dirname); 
+        is_start = 0;
+    }
+
+    work_cur_len = strlen (work_buf);
+    backup_cur_len = strlen (backup_buf);
+
+    while (work_dirp = readdir(work_d)) {
+        if ((!strcmp (work_dirp->d_name, ".")) ||
+            (!strcmp (work_dirp->d_name, "..")))
+            continue;
+
+        sprintf (&work_buf[work_cur_len], "/%s", work_dirp->d_name);       
+        sprintf (&backup_buf[backup_cur_len], "/%s", work_dirp->d_name);       
+        
+        struct stat st;
+        int status = stat (work_buf, &st); // 
+        
+        if (S_ISDIR(st.st_mode)) {
+            mkdir (backup_buf, st.st_mode | S_IWUSR); //
+            creat_n_cp_dir (work_buf, backup_buf, mode, cp_status);
+        } else {
+            *cp_status |= creat_n_cp_file (work_buf, backup_buf);  
+        }
+
+        work_buf[work_cur_len] = '\0';                               
+        backup_buf[backup_cur_len] = '\0';                               
+    }    
+
+    closedir (backup_d);
+    closedir (work_d);
+
+    return 0;
+}
+
 
 int get_cur_date (char *time_str) {
     assert (time);
@@ -246,7 +324,7 @@ int get_cur_date (char *time_str) {
 
 void itoa (int num, char *str) {
     assert(str);
-    
+
     int sign = 0;
 
     if ((sign = num) < 0)  {
