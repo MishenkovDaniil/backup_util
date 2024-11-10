@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "config.h"
 
@@ -28,8 +29,10 @@ int check_input (const char *work_fname, const char *backup_fname);
 int create_backup (struct Backup_args *backup_args);
 
 int cp_to_backup (const char *backup_fname, const char * work_fname, const int mode);
-int get_time (char *time);
+int get_cur_date (char *time);
 
+void itoa(int num, char *str);
+void reverse(char *str);
 
 #endif /*BACKUP_H*/
 

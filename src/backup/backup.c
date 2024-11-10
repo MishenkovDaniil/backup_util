@@ -3,8 +3,9 @@
 #include <assert.h>
 #include <string.h>
 #include <dirent.h>
-
-
+#include <stdlib.h>
+#include <ctype.h>
+#include <fcntl.h>
 void construct (struct Backup_args *backup_args, const char *work_fname, const char *backup_fname, const int mode) {
     assert (backup_args && work_fname && backup_fname);
 
@@ -173,7 +174,7 @@ int create_backup (struct Backup_args *backup_args) {
     get_cur_date (time);
 
     sprintf (real_backup_fname, "%s/%s", backup_args->backup_fname_, time);
-    mkdir (real_backup_fname, 0x777);
+    mkdir (real_backup_fname, S_IRWXU | S_IRWXG | S_IRWXO);
 
     cp_to_backup (real_backup_fname, backup_args->work_fname_, backup_args->mode_);
 
@@ -183,6 +184,93 @@ int create_backup (struct Backup_args *backup_args) {
 int cp_to_backup (const char *backup_fname, const char * work_fname, const int mode) {
     return 0;
 }
-int get_time (char *time) {
+
+int creat_n_cp_file (const char *src_path, const char *dst_path) {
+    static char buf[8096];
+
+    struct stat src_st;
+    int status = stat (src_path, &src_st);
+    __uint64_t size = src_st.st_size;
+
+    int src_fd = open (src_path, O_RDONLY);
+    int dst_fd = open (dst_path, O_CREAT | O_WRONLY, src_st.st_mode | S_IWUSR); /// S_IWUSR to guarantee writing opportunity
+
+    if (size > 8096) {
+        char *whole_buf = (char *)malloc (sizeof(char) * size);
+        assert (whole_buf);
+
+        read(src_fd, whole_buf, size);
+        write (dst_fd, whole_buf, size);
+
+        free (buf);
+    } else {
+        read(src_fd, buf, size);
+        write (dst_fd, buf, size);
+    }
+
+    close (src_fd);
+    close (dst_fd);
+
     return 0;
+}
+
+int get_cur_date (char *time_str) {
+    assert (time);
+
+    char year   [5] = "";
+    char month  [3] = "";
+    char day    [3] = "";
+    char hour   [3] = "";
+    char minute [3] = "";
+    char second [3] = "";
+    
+    time_t result = time(NULL);
+   
+    if (result == (time_t)-1) {
+        return ERROR_CODE;
+    }
+   
+    struct tm *date = localtime(&result);
+
+    itoa(date->tm_year + 1900, year);
+    itoa(date->tm_mon, month);
+    itoa(date->tm_mday, day);
+    itoa(date->tm_hour, hour);
+    itoa(date->tm_min, minute);
+    itoa(date->tm_sec, second);
+    
+    sprintf (time_str, "%s-%s-%s_%s-%s-%s",year, month, day, hour, minute, second); ///YYYY-MM-DD_HH-MM-SS time format
+
+    return 0;
+}
+
+void itoa (int num, char *str) {
+    assert(str);
+    
+    int sign = 0;
+
+    if ((sign = num) < 0)  {
+        num = -num;          
+    } 
+
+    int idx = 0;
+    for (; num > 0; ++idx, num /= 10) {
+        str[idx] = '0' + num % 10;
+    }
+
+    if (sign < 0) {
+        str[idx++] = '-';
+    }
+
+    str[idx] = '\0';
+
+    reverse(str);
+}
+
+void reverse (char *str) {
+    for (int i = 0, j = strlen(str) - 1; i < j; ++i, --j) {
+        char temp = str[i];
+        str[i] = str[j];
+        str[j] = temp;
+    }
 }
