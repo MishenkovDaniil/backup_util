@@ -4,7 +4,9 @@
 #include <fcntl.h>
 #include <libgen.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "backup.h"
 #include "../shared/config.h"
@@ -296,7 +298,7 @@ int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const 
 }
 
 int get_cur_date (char *time_str) {
-    assert (time);
+    assert (time_str);
 
     char year   [5] = "";
     char month  [3] = "";
