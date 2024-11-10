@@ -31,7 +31,11 @@ int cp_to_backup (const char *backup_fname, const char * work_fname, const int m
 void cp_to_backup_recursive (const char *backup_fname, const char * work_fname, const int mode, int *cp_status);
 int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const int mode, int *cp_status);
 int creat_n_cp_file (const char *src_path, const char *dst_path);
-int create_backup_info_file (const char *backup_path, const int mode);
+int create_backup_info_file (const char *backup_path, const int mode, const char *time);
+
+int cmp_time (char *time1, char *time2);
+int init_backup_time (const char *info_file_path, char *time);
+int get_backup_mode (const char *info_file_path);
 
 int get_cur_date (char *time);
 void itoa(int num, char *str);

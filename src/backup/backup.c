@@ -19,6 +19,7 @@ void construct (struct Backup_args *backup_args, const char *work_fname, const c
     backup_args->mode_ = mode;
 }
 
+
 int check_read_permission (const char *filename, struct stat *fs) {
     assert (filename && fs);
 
@@ -91,6 +92,7 @@ int check_read_permission_recursive (const char *filename) {
     return read_status;
 }
 
+
 int parse_args (const int argc, const char **argv, struct Backup_args *backup_args) {
     assert (argv && backup_args);
     // handle null values
@@ -121,6 +123,7 @@ int parse_mode (const char *input_mode, int *mode) {
 
     return 0;
 }
+
 
 int check_input (const char *work_fname, const char *backup_fname) {
     assert (work_fname && backup_fname);
@@ -153,6 +156,7 @@ int check_input (const char *work_fname, const char *backup_fname) {
     return 0;
 }
 
+
 int create_backup (struct Backup_args *backup_args) {
     assert (backup_args && backup_args->work_fname_ && backup_args->backup_fname_);
     
@@ -173,13 +177,15 @@ int create_backup (struct Backup_args *backup_args) {
         fprintf (stderr, "gg\n");
         return ERROR_CODE;
     }
+    // char latest[20] = "";
+    // get_latest_full_backup_basename (backup_args->backup_fname_, latest);
 
     get_cur_date (time);
     printf ("%s\n", work_basename);
 
     sprintf (real_backup_fname, "%s/%s", backup_args->backup_fname_, time);
     mkdir (real_backup_fname, S_IRWXU | S_IRWXG | S_IRWXO);
-    create_backup_info_file (real_backup_fname, backup_args->mode_);
+    create_backup_info_file (real_backup_fname, backup_args->mode_, time);
     sprintf (&real_backup_fname[strlen(real_backup_fname)], "/%s", work_basename);
 
     cp_to_backup (real_backup_fname, backup_args->work_fname_, backup_args->mode_);
@@ -187,7 +193,7 @@ int create_backup (struct Backup_args *backup_args) {
     return 0;
 }
 
-int create_backup_info_file (const char *backup_path, const int mode) {
+int create_backup_info_file (const char *backup_path, const int mode, const char *time) {
     char buf[1024] ="";
     sprintf (buf, "%s/%s", backup_path, backup_info_fname);
 
@@ -197,14 +203,13 @@ int create_backup_info_file (const char *backup_path, const int mode) {
         return ERROR_CODE;
     }
 
-    sprintf (buf, "mode = %d.\n", mode);
+    sprintf (buf, "mode = %d.\ntime = %s.\n", mode, time);
 
     write (fd, buf, strlen(buf));
 
     close (fd);
     return 0;
 }
-
 
 int cp_to_backup (const char *backup_fname, const char * work_fname, const int mode) {
     int cp_status  = 0;
@@ -315,6 +320,104 @@ int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const 
     closedir (work_d);
 
     return 0;
+}
+
+
+int get_latest_full_backup_basename (const char *backup_path, char *latest_basename) {
+    assert (backup_path && latest_basename);
+
+    DIR *backup_dir = opendir (backup_path);
+
+    char buf[1024] = "";
+
+    sprintf (buf, "%s", backup_path);
+    __uint64_t len = strlen (buf);
+
+    struct dirent *backup_dirp;
+    int is_start = 1;
+    char best_time[20] = "";
+
+    while (backup_dirp = readdir(backup_dir)) {
+        if ((!strcmp (backup_dirp->d_name, ".")) ||
+            (!strcmp (backup_dirp->d_name, "..")))
+            continue;
+        sprintf (&buf[len], "/%s/%s", backup_dirp->d_name, backup_info_fname);
+        // printf ("cur = %s\n", buf);
+        if (get_backup_mode (buf) == Full) {
+            if (is_start) {
+                init_backup_time (buf, best_time);
+                is_start = 0;
+            } else {
+                char temp[20] = "";
+                init_backup_time (buf, temp);
+                if (cmp_time (best_time, temp) > 0) {
+                    strcpy (best_time, temp);
+                }
+            }
+        }
+    }
+    strcpy (latest_basename, best_time);
+    // printf ("latest_basename = %s\n", latest_basename);
+    closedir (backup_dir);
+    return 0;
+}
+
+int get_backup_mode (const char *info_file_path) {
+    assert (info_file_path);
+
+    FILE *file = fopen (info_file_path, "r");
+    int mode = None;
+    fscanf (file, "mode = %d.", &mode);
+    // printf ("mode = %d\n", mode);
+    fclose (file);
+    
+    return mode;
+}
+
+int init_backup_time (const char *info_file_path, char *time) {
+    assert (info_file_path && time);
+
+    FILE *file = fopen (info_file_path, "r");
+    
+    fscanf (file, "%*[^\n]\n%*[^=]= %[^.]", time);
+    // printf ("time = [%s]\n", time);    
+    fclose (file);
+
+    return 0;
+}
+
+int cmp_time (char *time1, char *time2) {
+    static int year1 = 0;
+    static int year2 = 0;
+
+    static int mon1 = 0;
+    static int mon2 = 0;
+
+    static int day1 = 0;
+    static int day2 = 0;
+
+    static int hour1 = 0;
+    static int hour2 = 0;
+
+    static int min1 = 0;
+    static int min2 = 0;
+
+    static int sec1 = 0;
+    static int sec2 = 0;
+
+    sscanf (time1, "%d-%d-%d_%d-%d-%d", &year1, &mon1, &day1, &hour1, &min1, &sec1);
+    sscanf (time2, "%d-%d-%d_%d-%d-%d", &year2, &mon2, &day2, &hour2, &min2, &sec2);
+
+    __uint64_t date1 =  (day1) + (mon1) * 100 +  (year1) * 10000;
+    __uint64_t date2 =  (day2) + (mon2) * 100 +  (year2) * 10000;
+
+    __uint64_t clock1 =  (sec1) + (min1) * 100 +  (hour1) * 10000;
+    __uint64_t clock2 =  (sec2) + (min2) * 100 +  (hour2) * 10000;
+
+    if (date1 == date2) {
+        return clock1 - clock2;
+    }
+    return date1 - date2;
 }
 
 int get_cur_date (char *time_str) {
