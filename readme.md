@@ -11,7 +11,7 @@
 - run ```./my_restore <backup path> <work path>```.
 
 Where:
-- ```full/incremental``` $\text{--}$ backup modes: ```full``` means a full ```work``` backup, ```incremental``` - backup for modified files and directories only
+- ```full/incremental``` $\text{--}$ backup modes: ```full``` means a full ```work``` backup, ```incremental``` - backup for modified files and directories only (compared to latest ```full``` backup)
 - ```work path``` - path to a directory or file to backup 
 - ```backup path``` - path to a backup storage directory
 
