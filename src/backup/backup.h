@@ -1,13 +1,11 @@
 #ifndef BACKUP_H
 #define BACKUP_H
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <unistd.h>
 
-#include "config.h"
+#include "../shared/config.h"
 
 struct Backup_args {
     char *work_fname_;
@@ -30,6 +28,8 @@ int create_backup (struct Backup_args *backup_args);
 
 int cp_to_backup (const char *backup_fname, const char * work_fname, const int mode);
 void cp_to_backup_recursive (const char *backup_fname, const char * work_fname, const int mode, int *cp_status);
+int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const int mode, int *cp_status);
+int creat_n_cp_file (const char *src_path, const char *dst_path);
 
 int get_cur_date (char *time);
 void itoa(int num, char *str);

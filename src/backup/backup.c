@@ -2,12 +2,12 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libgen.h>
 
 #include "backup.h"
-#include "config.h"
+#include "../shared/config.h"
 
 void construct (struct Backup_args *backup_args, const char *work_fname, const char *backup_fname, const int mode) {
     assert (backup_args && work_fname && backup_fname);
@@ -97,10 +97,6 @@ int parse_args (const int argc, const char **argv, struct Backup_args *backup_ar
         fprintf (stderr, "Error: wrong input format...\n");
         return ERROR_CODE; 
     }
-    // printf ("[%s]\n", argv[0]);
-    // printf ("[%s]\n", argv[1]);
-    // printf ("[%s]\n", argv[2]);
-    // printf ("[%s]\n", argv[3]);
     int mode = -1;
     if (parse_mode (argv[1], &mode) == ERROR_CODE) {
         return ERROR_CODE;
@@ -171,7 +167,7 @@ int create_backup (struct Backup_args *backup_args) {
     char time[20] = "";
     char *work_basename = basename (backup_args->work_fname_);
 
-    if (strlen (backup_args->backup_fname_) + strlen(work_basename) + 20 > 1024) {
+    if (strlen (backup_args->backup_fname_) + strlen(work_basename) + 19 + 3 > 1024) { /// 3 string lens (strlen(time) == 19 always) + 2 '/' + '\0'
         fprintf (stderr, "gg\n");
         return ERROR_CODE;
     }
