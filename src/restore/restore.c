@@ -26,7 +26,7 @@ int parse_args (const int argc, const char **argv, struct Restore_args *restore_
         return ERROR_CODE; 
     }
     
-    construct (restore_args, argv[1], argv[2]);
+    construct (restore_args, argv[2], argv[1]);
     return 0;
 }
 
@@ -64,11 +64,7 @@ int restore_backup (const char *backup_fname, const char *work_fname) {
     assert (backup_fname && work_fname);
     
     int restore_status  = 0;
-    // printf ("backup_fname = %s\n", backup_fname);
-    // printf ("work_fname = %s\n", work_fname);
-    
     restore_recursive (backup_fname, work_fname, &restore_status);
-
     return restore_status;
 }
 
@@ -79,11 +75,8 @@ void restore_recursive (const char *backup_fname, const char *work_fname, int *r
     int status = stat (backup_fname, &st);
 
     if (S_ISDIR (st.st_mode)) {
-        // printf ("go dir\n");
-        // mkdir (work_fname, S_IRWXU | S_IRWXG | S_IRWXO);
         restore_dir (work_fname, backup_fname, restore_status);
     } else {
-        // printf ("go file\n");
         *restore_status = restore_file (work_fname, backup_fname);
     }
 }
