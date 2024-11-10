@@ -179,12 +179,32 @@ int create_backup (struct Backup_args *backup_args) {
 
     sprintf (real_backup_fname, "%s/%s", backup_args->backup_fname_, time);
     mkdir (real_backup_fname, S_IRWXU | S_IRWXG | S_IRWXO);
+    create_backup_info_file (real_backup_fname, backup_args->mode_);
     sprintf (&real_backup_fname[strlen(real_backup_fname)], "/%s", work_basename);
 
     cp_to_backup (real_backup_fname, backup_args->work_fname_, backup_args->mode_);
 
     return 0;
 }
+
+int create_backup_info_file (const char *backup_path, const int mode) {
+    char buf[1024] ="";
+    sprintf (buf, "%s/%s", backup_path, backup_info_fname);
+
+    int fd = open (buf, O_CREAT | O_WRONLY, S_IRWXU | S_IRGRP | S_IROTH);
+    if (fd == - 1) {
+        perror ("Error:cannot create backup info file.\n");
+        return ERROR_CODE;
+    }
+
+    sprintf (buf, "mode = %d.\n", mode);
+
+    write (fd, buf, strlen(buf));
+
+    close (fd);
+    return 0;
+}
+
 
 int cp_to_backup (const char *backup_fname, const char * work_fname, const int mode) {
     int cp_status  = 0;

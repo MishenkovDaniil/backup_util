@@ -7,6 +7,7 @@
 
 #include "../shared/config.h"
 
+static const char *backup_info_fname = "backup_info.txt";
 struct Backup_args {
     char *work_fname_;
     char *backup_fname_;
@@ -30,6 +31,7 @@ int cp_to_backup (const char *backup_fname, const char * work_fname, const int m
 void cp_to_backup_recursive (const char *backup_fname, const char * work_fname, const int mode, int *cp_status);
 int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const int mode, int *cp_status);
 int creat_n_cp_file (const char *src_path, const char *dst_path);
+int create_backup_info_file (const char *backup_path, const int mode);
 
 int get_cur_date (char *time);
 void itoa(int num, char *str);
