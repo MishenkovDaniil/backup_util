@@ -1,11 +1,11 @@
 #include <assert.h>
 #include <ctype.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 #include "restore.h"
 #include "../shared/config.h"
@@ -46,10 +46,10 @@ int check_write_permission (const char *filename, struct stat *fs) {
 int restore (const struct Restore_args *restore_args) {
     assert (restore_args);
 
-    char backup_base_dirname[1024] = "";
+    char backup_base_dirname[MAX_FILE_PATH] = "";
     char *work_basename = basename (restore_args->work_fname_);
 
-    if (strlen(restore_args->backup_fname_) + strlen(work_basename) + 2 > 1024) {
+    if (strlen(restore_args->backup_fname_) + strlen(work_basename) + 2 > MAX_FILE_PATH) {
         fprintf (stderr, "gg\n");
         return ERROR_CODE;
     }
@@ -131,11 +131,9 @@ int restore_file (const char *src_path, const char *dst_path) { /// src - backup
 int restore_dir (const char *work_dirname, const char *backup_dirname, int *restore_status) {
     DIR *work_d = opendir (work_dirname);
     DIR *backup_d = opendir (backup_dirname);
-    // printf ("work_dirname = %s\n", work_dirname);
-    // printf ("backup_dirname = %s\n", backup_dirname);
 
-    static char work_buf[1024] = "";
-    static char backup_buf[1024] = "";
+    static char work_buf[MAX_FILE_PATH] = "";
+    static char backup_buf[MAX_FILE_PATH] = "";
     
     __uint64_t work_cur_len  = 0;
     __uint64_t backup_cur_len  = 0;

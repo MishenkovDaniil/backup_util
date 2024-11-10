@@ -35,11 +35,11 @@ int create_backup (struct Backup_args *backup_args) {
         return ERROR_CODE;
     }
 
-    char real_backup_fname[1024] = "";
+    char real_backup_fname[MAX_FILE_PATH] = "";
     char time[20] = "";
     char *work_basename = basename (backup_args->work_fname_);
 
-    if (strlen (backup_args->backup_fname_) + strlen(work_basename) + 19 + 3 > 1024) { /// 3 string lens (strlen(time) == 19 always) + 2 '/' + '\0'
+    if (strlen (backup_args->backup_fname_) + strlen(work_basename) + 19 + 3 > MAX_FILE_PATH) { /// 3 string lens (strlen(time) == 19 always) + 2 '/' + '\0'
         fprintf (stderr, "gg\n");
         return ERROR_CODE;
     }
@@ -58,7 +58,7 @@ int create_backup (struct Backup_args *backup_args) {
     sprintf (&real_backup_fname[strlen(real_backup_fname)], "/%s", work_basename);
 
     if (strlen(latest)) {
-        char latest_fname[1024] = "";
+        char latest_fname[MAX_FILE_PATH] = "";
         sprintf (latest_fname, "%s/%s/%s", backup_args->backup_fname_, latest, work_basename);
         create_incremental_backup (real_backup_fname, backup_args->work_fname_, latest_fname);
     } else {
@@ -69,7 +69,7 @@ int create_backup (struct Backup_args *backup_args) {
 }
 
 int create_backup_info_file (const char *backup_path, const int mode, const char *time) {
-    char buf[1024] ="";
+    char buf[MAX_FILE_PATH] ="";
     sprintf (buf, "%s/%s", backup_path, backup_info_fname);
 
     int fd = open (buf, O_CREAT | O_WRONLY, S_IRWXU | S_IRGRP | S_IROTH);
@@ -162,8 +162,8 @@ int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const 
     DIR *work_d = opendir (work_dirname);
     DIR *backup_d = opendir (backup_dirname);
 
-    static char work_buf[1024] = "";
-    static char backup_buf[1024] = "";
+    static char work_buf[MAX_FILE_PATH] = "";
+    static char backup_buf[MAX_FILE_PATH] = "";
     
     __uint64_t work_cur_len  = 0;
     __uint64_t backup_cur_len  = 0;
@@ -224,9 +224,9 @@ int creat_n_cp_dir_incr (const char *work_dirname, const char *backup_dirname, c
     DIR *work_d = opendir (work_dirname);
     DIR *backup_d = opendir (backup_dirname);
 
-    static char work_buf[1024] = "";
-    static char backup_buf[1024] = "";
-    static char latest_buf[1024] = "";
+    static char work_buf[MAX_FILE_PATH] = "";
+    static char backup_buf[MAX_FILE_PATH] = "";
+    static char latest_buf[MAX_FILE_PATH] = "";
     
     __uint64_t work_cur_len  = 0;
     __uint64_t backup_cur_len  = 0;

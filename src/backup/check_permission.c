@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "check_permission.h"
+#include "../shared/config.h"
 
 int check_read_permission (const char *filename, struct stat *fs) {
     assert (filename && fs);
@@ -32,7 +33,7 @@ int check_read_permission_recursive_ (const char *filename, int *read_status) {
 int check_read_permission_dir (const char *dirname, int *read_status) {
     DIR *d = opendir (dirname);
     
-    static char buf[1024] = "";
+    static char buf[MAX_FILE_PATH] = "";
     size_t cur_len  = 0;
     static int is_start = 1;
 

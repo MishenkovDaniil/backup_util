@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#include "../shared/config.h"
 #include "restore.h"
+#include "../shared/config.h"
 
 int main (const int argc, const char **argv) {
     struct Restore_args restore_args;

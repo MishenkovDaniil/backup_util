@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "processing.h"
+#include "../shared/config.h"
 
 int parse_args (const int argc, const char **argv, struct Backup_args *backup_args) {
     assert (argv && backup_args);
@@ -92,7 +93,7 @@ int get_latest_full_backup_basename (const char *backup_path, char *latest_basen
 
     DIR *backup_dir = opendir (backup_path);
 
-    char buf[1024] = "";
+    char buf[MAX_FILE_PATH] = "";
 
     sprintf (buf, "%s", backup_path);
     __uint64_t len = strlen (buf);
