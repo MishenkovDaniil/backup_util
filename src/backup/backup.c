@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <stdlib.h>
@@ -169,7 +170,7 @@ int create_backup (struct Backup_args *backup_args) {
         return ERROR_CODE;
     }
 
-    char real_backup_fname[1024] ="";
+    char real_backup_fname[1024] = "";
     char time[20] = "";
     char *work_basename = basename (backup_args->work_fname_);
 
@@ -177,8 +178,11 @@ int create_backup (struct Backup_args *backup_args) {
         fprintf (stderr, "gg\n");
         return ERROR_CODE;
     }
-    // char latest[20] = "";
-    // get_latest_full_backup_basename (backup_args->backup_fname_, latest);
+
+    char latest[20] = "";
+    if (backup_args->mode_ == Incremental) {
+        get_latest_full_backup_basename (backup_args->backup_fname_, latest);
+    }
 
     get_cur_date (time);
     printf ("%s\n", work_basename);
@@ -188,7 +192,13 @@ int create_backup (struct Backup_args *backup_args) {
     create_backup_info_file (real_backup_fname, backup_args->mode_, time);
     sprintf (&real_backup_fname[strlen(real_backup_fname)], "/%s", work_basename);
 
-    cp_to_backup (real_backup_fname, backup_args->work_fname_, backup_args->mode_);
+    if (strlen(latest)) {
+        char latest_fname[1024] = "";
+        sprintf (latest_fname, "%s/%s/%s", backup_args->backup_fname_, latest, work_basename);
+        create_incremental_backup (real_backup_fname, backup_args->work_fname_, latest_fname);
+    } else {
+        cp_to_backup (real_backup_fname, backup_args->work_fname_, backup_args->mode_);
+    }
 
     return 0;
 }
@@ -219,6 +229,29 @@ int cp_to_backup (const char *backup_fname, const char * work_fname, const int m
     return cp_status;
 }
 
+int create_incremental_backup (const char *backup_fname, const char *work_fname, const char *latest_fname){
+    int cp_status  = 0;
+    
+    cp_to_backup_incremental (backup_fname, work_fname, latest_fname, &cp_status);
+
+    return cp_status;
+}
+
+void cp_to_backup_incremental (const char *backup_fname, const char *work_fname, const char *latest_fname, int *cp_status) {
+    struct stat st;
+    int status = stat (work_fname, &st);
+    if (S_ISDIR (st.st_mode)) {
+        // if (is_modified(work_fname, latest_fname)) {
+            mkdir (backup_fname, S_IRWXU | S_IRWXG | S_IRWXO);
+            creat_n_cp_dir_incr (work_fname, backup_fname, latest_fname, cp_status);
+        // }
+    } else {
+        if (is_modified(work_fname, latest_fname)) {
+            creat_n_cp_file (work_fname, backup_fname);
+        }
+    }
+}
+
 void cp_to_backup_recursive (const char *backup_fname, const char *work_fname, const int mode, int *cp_status) {
     struct stat st;
     int status = stat (work_fname, &st);
@@ -229,6 +262,23 @@ void cp_to_backup_recursive (const char *backup_fname, const char *work_fname, c
     } else {
         creat_n_cp_file (work_fname, backup_fname);
     }
+}
+
+int is_modified (const char *work_path, const char *backup_path) {
+    struct stat work_st;
+    struct stat backup_st;
+
+    stat (work_path, &work_st);
+    int status = stat (backup_path, &backup_st);
+    if (status == -1 && errno == ENOENT) {
+        return 1;
+    } else if (status == -1){
+        fprintf (stderr, "error %s, %s\n", work_path, backup_path); 
+        perror ("");
+        return 1;
+    }
+
+    return (work_st.st_mtime > backup_st.st_mtime);
 }
 
 int creat_n_cp_file (const char *src_path, const char *dst_path) {
@@ -322,6 +372,74 @@ int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const 
     return 0;
 }
 
+int creat_n_cp_dir_incr (const char *work_dirname, const char *backup_dirname, const char *latest_dirname, int *cp_status) {
+    DIR *work_d = opendir (work_dirname);
+    DIR *backup_d = opendir (backup_dirname);
+
+    static char work_buf[1024] = "";
+    static char backup_buf[1024] = "";
+    static char latest_buf[1024] = "";
+    
+    __uint64_t work_cur_len  = 0;
+    __uint64_t backup_cur_len  = 0;
+    __uint64_t latest_cur_len  = 0;
+    static int is_start = 1;
+
+    if (!work_d) {
+        fprintf (stderr, "Error: cannot open dir %s", work_d);
+        perror ("");
+        return ERROR_CODE;
+    }
+    if (!backup_d) {
+        fprintf (stderr, "Error: cannot open dir %s", backup_d);
+        perror ("");
+        return ERROR_CODE;
+    }
+
+    struct dirent *work_dirp;
+
+    if (is_start) {
+        sprintf (work_buf, "%s", work_dirname); 
+        sprintf (backup_buf, "%s", backup_dirname); 
+        sprintf (latest_buf, "%s", latest_dirname); 
+        is_start = 0;
+    }
+
+    work_cur_len    = strlen (work_buf);
+    backup_cur_len  = strlen (backup_buf);
+    latest_cur_len  = strlen (latest_buf);
+
+    while ((work_dirp = readdir(work_d))) {
+        if ((!strcmp (work_dirp->d_name, ".")) ||
+            (!strcmp (work_dirp->d_name, "..")))
+            continue;
+
+        sprintf (&work_buf[work_cur_len], "/%s", work_dirp->d_name);       
+        sprintf (&backup_buf[backup_cur_len], "/%s", work_dirp->d_name);       
+        sprintf (&latest_buf[latest_cur_len], "/%s", work_dirp->d_name);       
+        
+        struct stat st;
+        int status = stat (work_buf, &st); // 
+        
+        if (S_ISDIR(st.st_mode)) {
+            mkdir (backup_buf, st.st_mode | S_IWUSR); //
+            creat_n_cp_dir_incr (work_buf, backup_buf, latest_buf, cp_status);
+        } else {
+            if (!is_modified(work_buf, latest_buf)) 
+                continue;
+            *cp_status |= creat_n_cp_file (work_buf, backup_buf);  
+        }
+
+        work_buf[work_cur_len] = '\0';                               
+        backup_buf[backup_cur_len] = '\0';                               
+        latest_buf[latest_cur_len] = '\0';                               
+    }    
+
+    closedir (backup_d);
+    closedir (work_d);
+
+    return 0;
+}
 
 int get_latest_full_backup_basename (const char *backup_path, char *latest_basename) {
     assert (backup_path && latest_basename);
@@ -342,7 +460,6 @@ int get_latest_full_backup_basename (const char *backup_path, char *latest_basen
             (!strcmp (backup_dirp->d_name, "..")))
             continue;
         sprintf (&buf[len], "/%s/%s", backup_dirp->d_name, backup_info_fname);
-        // printf ("cur = %s\n", buf);
         if (get_backup_mode (buf) == Full) {
             if (is_start) {
                 init_backup_time (buf, best_time);
@@ -357,7 +474,6 @@ int get_latest_full_backup_basename (const char *backup_path, char *latest_basen
         }
     }
     strcpy (latest_basename, best_time);
-    // printf ("latest_basename = %s\n", latest_basename);
     closedir (backup_dir);
     return 0;
 }
@@ -368,7 +484,6 @@ int get_backup_mode (const char *info_file_path) {
     FILE *file = fopen (info_file_path, "r");
     int mode = None;
     fscanf (file, "mode = %d.", &mode);
-    // printf ("mode = %d\n", mode);
     fclose (file);
     
     return mode;
@@ -380,7 +495,6 @@ int init_backup_time (const char *info_file_path, char *time) {
     FILE *file = fopen (info_file_path, "r");
     
     fscanf (file, "%*[^\n]\n%*[^=]= %[^.]", time);
-    // printf ("time = [%s]\n", time);    
     fclose (file);
 
     return 0;

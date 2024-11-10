@@ -27,6 +27,8 @@ int parse_mode (const char *input_mode, int *mode);
 int check_input (const char *work_fname, const char *backup_fname);
 int create_backup (struct Backup_args *backup_args);
 
+int create_incremental_backup (const char *backup_fname, const char * work_fname, const char *latest);
+
 int cp_to_backup (const char *backup_fname, const char * work_fname, const int mode);
 void cp_to_backup_recursive (const char *backup_fname, const char * work_fname, const int mode, int *cp_status);
 int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const int mode, int *cp_status);
