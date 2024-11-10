@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
 
 #include "backup.h"
 #include "config.h"
@@ -18,19 +19,16 @@ void construct (struct Backup_args *backup_args, const char *work_fname, const c
 
 int check_read_permission (const char *filename, struct stat *fs) {
     assert (filename && fs);
-    // printf ("[%s]\n", filename);
 
     int stat_status = stat (filename, fs);
     if (stat_status == -1) {
-        perror ("Getting file stats error"); //add advices 
+        fprintf (stderr, "Getting file %s stats error.\n", filename); 
+        perror (""); //add advices 
         return ERROR_CODE;
     }
-    
-    // printf ("[%s] -- %d\n", filename, (fs->st_mode & S_IRUSR) > 0);
 
     return (fs->st_mode & S_IRUSR) > 0;
 }
-
 
 int check_read_permission_recursive_ (const char *filename, int *read_status) {
     assert (filename && read_status);
@@ -85,7 +83,6 @@ int check_read_permission_dir (const char *dirname, int *read_status) {
     return 0;
 }
 
-
 int check_read_permission_recursive (const char *filename) {
     int read_status = 0;
     check_read_permission_recursive_ (filename, &read_status);
@@ -136,10 +133,15 @@ int check_input (const char *work_fname, const char *backup_fname) {
     int status = 0;
 
     status = stat (work_fname, &work_st);
-    status |= stat (backup_fname, &backup_st);
-
     if (status == -1) {
-        perror ("Error: stat() failed");
+        fprintf (stderr, "Error: stat() failed, filename - %s.", work_fname);
+        perror ("");
+        return ERROR_CODE;
+    }
+    status |= stat (backup_fname, &backup_st);
+    if (status == -1) {
+        fprintf (stderr, "Error: stat() failed, filename - %s.", backup_fname);
+        perror ("");
         return ERROR_CODE;
     }
 
@@ -167,16 +169,19 @@ int create_backup (struct Backup_args *backup_args) {
 
     char real_backup_fname[1024] ="";
     char time[20] = "";
+    char *work_basename = basename (backup_args->work_fname_);
 
-    if (strlen (backup_args->backup_fname_) + 20 > 1024) {
+    if (strlen (backup_args->backup_fname_) + strlen(work_basename) + 20 > 1024) {
         fprintf (stderr, "gg\n");
         return ERROR_CODE;
     }
 
     get_cur_date (time);
+    printf ("%s\n", work_basename);
 
     sprintf (real_backup_fname, "%s/%s", backup_args->backup_fname_, time);
     mkdir (real_backup_fname, S_IRWXU | S_IRWXG | S_IRWXO);
+    sprintf (&real_backup_fname[strlen(real_backup_fname)], "/%s", work_basename);
 
     cp_to_backup (real_backup_fname, backup_args->work_fname_, backup_args->mode_);
 
@@ -194,11 +199,12 @@ int cp_to_backup (const char *backup_fname, const char * work_fname, const int m
 void cp_to_backup_recursive (const char *backup_fname, const char *work_fname, const int mode, int *cp_status) {
     struct stat st;
     int status = stat (work_fname, &st);
+
     if (S_ISDIR (st.st_mode)) {
+        mkdir (backup_fname, S_IRWXU | S_IRWXG | S_IRWXO);
         creat_n_cp_dir (work_fname, backup_fname, mode, cp_status);
     } else {
-        // creat_n_cp_file () how to add filename of work ??
-        ;
+        creat_n_cp_file (work_fname, backup_fname);
     }
 }
 
@@ -234,8 +240,10 @@ int creat_n_cp_file (const char *src_path, const char *dst_path) {
 int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const int mode, int *cp_status) {
     DIR *work_d = opendir (work_dirname);
     DIR *backup_d = opendir (backup_dirname);
+
     static char work_buf[1024] = "";
     static char backup_buf[1024] = "";
+    
     __uint64_t work_cur_len  = 0;
     __uint64_t backup_cur_len  = 0;
     static int is_start = 1;
@@ -290,7 +298,6 @@ int creat_n_cp_dir (const char *work_dirname, const char *backup_dirname, const 
 
     return 0;
 }
-
 
 int get_cur_date (char *time_str) {
     assert (time);
