@@ -350,7 +350,7 @@ int get_latest_full_backup_basename (const char *backup_path, char *latest_basen
             } else {
                 char temp[20] = "";
                 init_backup_time (buf, temp);
-                if (cmp_time (best_time, temp) > 0) {
+                if (cmp_time (best_time, temp) < 0) {
                     strcpy (best_time, temp);
                 }
             }
